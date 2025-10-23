@@ -1,0 +1,42 @@
+# 使用国内可访问的镜像源构建
+FROM node:18-alpine AS builder
+
+WORKDIR /build
+COPY web/package.json web/package-lock.json ./
+RUN npm config set registry https://registry.npmmirror.com && \
+    npm install --legacy-peer-deps
+
+COPY ./web .
+COPY ./VERSION .
+RUN npm run build || true
+
+FROM golang:1.21-alpine AS builder2
+ENV GO111MODULE=on \
+    CGO_ENABLED=0 \
+    GOPROXY=https://goproxy.cn,direct
+
+ARG TARGETOS
+ARG TARGETARCH
+ENV GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH:-amd64}
+
+WORKDIR /build
+
+ADD go.mod go.sum ./
+RUN go mod download
+
+COPY . .
+RUN mkdir -p ./web/dist
+COPY --from=builder /build/dist/ ./web/dist/
+RUN go build -ldflags "-s -w -X 'github.com/QuantumNous/new-api/common.Version=$(cat VERSION)'" -o new-api
+
+FROM alpine:latest
+
+RUN sed -i 's/dl-cdn.alpinelinux.org/mirrors.aliyun.com/g' /etc/apk/repositories && \
+    apk upgrade --no-cache && \
+    apk add --no-cache ca-certificates tzdata && \
+    update-ca-certificates
+
+COPY --from=builder2 /build/new-api /
+EXPOSE 3000
+WORKDIR /data
+ENTRYPOINT ["/new-api"]
