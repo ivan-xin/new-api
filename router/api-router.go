@@ -81,6 +81,10 @@ func SetApiRouter(router *gin.Engine) {
 				selfRoute.POST("/amount", controller.RequestAmount)
 				selfRoute.POST("/stripe/pay", middleware.CriticalRateLimit(), controller.RequestStripePay)
 				selfRoute.POST("/stripe/amount", controller.RequestStripeAmount)
+				// Web3 USDC Payment Routes
+				selfRoute.GET("/web3/info", controller.GetWeb3PayInfo)
+				selfRoute.POST("/web3/pay", middleware.CriticalRateLimit(), controller.RequestWeb3Pay)
+				selfRoute.POST("/web3/verify", controller.VerifyWeb3Transaction)
 				selfRoute.POST("/aff_transfer", controller.TransferAffQuota)
 				selfRoute.PUT("/setting", controller.UpdateUserSetting)
 

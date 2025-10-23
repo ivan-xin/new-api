@@ -89,6 +89,16 @@ func InitOptionMap() {
 	common.OptionMap["AutoGroups"] = setting.AutoGroups2JsonString()
 	common.OptionMap["DefaultUseAutoGroup"] = strconv.FormatBool(setting.DefaultUseAutoGroup)
 	common.OptionMap["PayMethods"] = operation_setting.PayMethods2JsonString()
+
+	// Web3 配置 - 动态初始化
+	common.OptionMap["Web3ReceiverAddress"] = ""
+	for _, chain := range common.SupportedChains {
+		rpcKey := common.GetRPCConfigKey(chain.Name)
+		if rpcKey != "" {
+			common.OptionMap[rpcKey] = ""
+		}
+	}
+
 	common.OptionMap["GitHubClientId"] = ""
 	common.OptionMap["GitHubClientSecret"] = ""
 	common.OptionMap["TelegramBotToken"] = ""

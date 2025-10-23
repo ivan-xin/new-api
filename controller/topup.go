@@ -24,7 +24,14 @@ import (
 
 func GetTopUpInfo(c *gin.Context) {
 	// 获取支付方式
-	payMethods := operation_setting.PayMethods
+	// 只有在易支付配置完整时才使用默认支付方式
+	var payMethods []map[string]string
+	if operation_setting.PayAddress != "" && operation_setting.EpayId != "" && operation_setting.EpayKey != "" {
+		payMethods = operation_setting.PayMethods
+	} else {
+		// 易支付未启用,初始化为空数组
+		payMethods = make([]map[string]string, 0)
+	}
 
 	// 如果启用了 Stripe 支付，添加到支付方法列表
 	if setting.StripeApiSecret != "" && setting.StripeWebhookSecret != "" && setting.StripePriceId != "" {
@@ -48,12 +55,47 @@ func GetTopUpInfo(c *gin.Context) {
 		}
 	}
 
+	// 如果配置了 Web3 收款地址，添加 Web3 USDC 支付方式
+	common.SysLog(fmt.Sprintf("[DEBUG] Checking Web3ReceiverAddress, OptionMap has %d keys", len(common.OptionMap)))
+	if receiverAddr, ok := common.OptionMap["Web3ReceiverAddress"]; ok {
+		common.SysLog(fmt.Sprintf("[DEBUG] Web3ReceiverAddress found: %s", receiverAddr))
+		if receiverAddr != "" {
+			// 检查是否已经包含 Web3 USDC
+			hasWeb3 := false
+			for _, method := range payMethods {
+				if method["type"] == "web3_usdc" {
+					hasWeb3 = true
+					break
+				}
+			}
+
+			if !hasWeb3 {
+				web3Method := map[string]string{
+					"name":      "USDC",
+					"type":      "web3_usdc",
+					"color":     "#2775CA",
+					"min_topup": "10", // Web3 USDC 最低充值 10 USD
+				}
+				payMethods = append(payMethods, web3Method)
+				common.SysLog("[DEBUG] Web3 USDC payment method added")
+			} else {
+				common.SysLog("[DEBUG] Web3 USDC already exists in payMethods")
+			}
+		} else {
+			common.SysLog("[DEBUG] Web3ReceiverAddress is empty")
+		}
+	} else {
+		common.SysLog("[DEBUG] Web3ReceiverAddress not found in OptionMap")
+	}
+
 	data := gin.H{
 		"enable_online_topup": operation_setting.PayAddress != "" && operation_setting.EpayId != "" && operation_setting.EpayKey != "",
 		"enable_stripe_topup": setting.StripeApiSecret != "" && setting.StripeWebhookSecret != "" && setting.StripePriceId != "",
+		"enable_web3_topup":   common.OptionMap["Web3ReceiverAddress"] != "",
 		"pay_methods":         payMethods,
 		"min_topup":           operation_setting.MinTopUp,
 		"stripe_min_topup":    setting.StripeMinTopUp,
+		"web3_min_topup":      10,
 		"amount_options":      operation_setting.GetPaymentSetting().AmountOptions,
 		"discount":            operation_setting.GetPaymentSetting().AmountDiscount,
 	}
