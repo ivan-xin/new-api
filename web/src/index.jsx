@@ -32,6 +32,8 @@ import { LocaleProvider } from '@douyinfe/semi-ui';
 import { useTranslation } from 'react-i18next';
 import zh_CN from '@douyinfe/semi-ui/lib/es/locale/source/zh_CN';
 import en_GB from '@douyinfe/semi-ui/lib/es/locale/source/en_GB';
+import { Web3OnboardProvider } from '@web3-onboard/react';
+import web3Onboard from './utils/web3-onboard';
 
 // 欢迎信息（二次开发者未经允许不准将此移除）
 // Welcome message (Do not remove this without permission from the original developer)
@@ -57,21 +59,23 @@ function SemiLocaleWrapper({ children }) {
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
   <React.StrictMode>
-    <StatusProvider>
-      <UserProvider>
-        <BrowserRouter
-          future={{
-            v7_startTransition: true,
-            v7_relativeSplatPath: true,
-          }}
-        >
-          <ThemeProvider>
-            <SemiLocaleWrapper>
-              <PageLayout />
-            </SemiLocaleWrapper>
-          </ThemeProvider>
-        </BrowserRouter>
-      </UserProvider>
-    </StatusProvider>
+    <Web3OnboardProvider web3Onboard={web3Onboard}>
+      <StatusProvider>
+        <UserProvider>
+          <BrowserRouter
+            future={{
+              v7_startTransition: true,
+              v7_relativeSplatPath: true,
+            }}
+          >
+            <ThemeProvider>
+              <SemiLocaleWrapper>
+                <PageLayout />
+              </SemiLocaleWrapper>
+            </ThemeProvider>
+          </BrowserRouter>
+        </UserProvider>
+      </StatusProvider>
+    </Web3OnboardProvider>
   </React.StrictMode>,
 );

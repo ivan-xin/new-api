@@ -22,11 +22,26 @@ import { Card, Spin } from '@douyinfe/semi-ui';
 import SettingsGeneralPayment from '../../pages/Setting/Payment/SettingsGeneralPayment';
 import SettingsPaymentGateway from '../../pages/Setting/Payment/SettingsPaymentGateway';
 import SettingsPaymentGatewayStripe from '../../pages/Setting/Payment/SettingsPaymentGatewayStripe';
+import SettingsPaymentGatewayWeb3 from '../../pages/Setting/Payment/SettingsPaymentGatewayWeb3';
 import { API, showError, toBoolean } from '../../helpers';
 import { useTranslation } from 'react-i18next';
+import { SUPPORTED_CHAINS, RPC_CONFIG_FIELDS } from '../../constants/web3.constants';
 
 const PaymentSetting = () => {
   const { t } = useTranslation();
+  
+  // 动态生成Web3 RPC字段的初始状态
+  const getInitialWeb3Fields = () => {
+    const fields = { Web3ReceiverAddress: '' };
+    SUPPORTED_CHAINS.forEach(chain => {
+      const fieldName = RPC_CONFIG_FIELDS[chain.name];
+      if (fieldName) {
+        fields[fieldName] = '';
+      }
+    });
+    return fields;
+  };
+  
   let [inputs, setInputs] = useState({
     ServerAddress: '',
     PayAddress: '',
@@ -46,6 +61,8 @@ const PaymentSetting = () => {
     StripeUnitPrice: 8.0,
     StripeMinTopUp: 1,
     StripePromotionCodesEnabled: false,
+
+    ...getInitialWeb3Fields(),
   });
 
   let [loading, setLoading] = useState(false);
@@ -141,6 +158,9 @@ const PaymentSetting = () => {
         </Card>
         <Card style={{ marginTop: '10px' }}>
           <SettingsPaymentGatewayStripe options={inputs} refresh={onRefresh} />
+        </Card>
+        <Card style={{ marginTop: '10px' }}>
+          <SettingsPaymentGatewayWeb3 options={inputs} refresh={onRefresh} />
         </Card>
       </Spin>
     </>

@@ -41,6 +41,7 @@ import {
   BarChart2,
   TrendingUp,
   Receipt,
+  CircleDollarSign,
 } from 'lucide-react';
 import { IconGift } from '@douyinfe/semi-icons';
 import { useMinimumLoadingTime } from '../../hooks/common/useMinimumLoadingTime';
@@ -52,6 +53,7 @@ const RechargeCard = ({
   t,
   enableOnlineTopUp,
   enableStripeTopUp,
+  enableWeb3TopUp,
   presetAmounts,
   selectedPreset,
   selectPresetAmount,
@@ -216,19 +218,19 @@ const RechargeCard = ({
             <div className='py-8 flex justify-center'>
               <Spin size='large' />
             </div>
-          ) : enableOnlineTopUp || enableStripeTopUp ? (
+          ) : enableOnlineTopUp || enableStripeTopUp || enableWeb3TopUp ? (
             <Form
               getFormApi={(api) => (onlineFormApiRef.current = api)}
               initValues={{ topUpCount: topUpCount }}
             >
               <div className='space-y-6'>
-                {(enableOnlineTopUp || enableStripeTopUp) && (
+                {(enableOnlineTopUp || enableStripeTopUp || enableWeb3TopUp) && (
                   <Row gutter={12}>
                     <Col xs={24} sm={24} md={24} lg={10} xl={10}>
                       <Form.InputNumber
                         field='topUpCount'
                         label={t('充值数量')}
-                        disabled={!enableOnlineTopUp && !enableStripeTopUp}
+                        disabled={!enableOnlineTopUp && !enableStripeTopUp && !enableWeb3TopUp}
                         placeholder={
                           t('充值数量，最低 ') + renderQuotaWithAmount(minTopUp)
                         }
@@ -288,9 +290,11 @@ const RechargeCard = ({
                               const minTopupVal =
                                 Number(payMethod.min_topup) || 0;
                               const isStripe = payMethod.type === 'stripe';
+                              const isWeb3 = payMethod.type === 'web3_usdc';
                               const disabled =
-                                (!enableOnlineTopUp && !isStripe) ||
+                                (!enableOnlineTopUp && !isStripe && !isWeb3) ||
                                 (!enableStripeTopUp && isStripe) ||
+                                (!enableWeb3TopUp && isWeb3) ||
                                 minTopupVal > Number(topUpCount || 0);
 
                               const buttonEl = (
@@ -310,6 +314,8 @@ const RechargeCard = ({
                                       <SiWechat size={18} color='#07C160' />
                                     ) : payMethod.type === 'stripe' ? (
                                       <SiStripe size={18} color='#635BFF' />
+                                    ) : payMethod.type === 'web3_usdc' ? (
+                                      <CircleDollarSign size={18} color='#2775CA' />
                                     ) : (
                                       <CreditCard
                                         size={18}
@@ -355,7 +361,7 @@ const RechargeCard = ({
                   </Row>
                 )}
 
-                {(enableOnlineTopUp || enableStripeTopUp) && (
+                {(enableOnlineTopUp || enableStripeTopUp || enableWeb3TopUp) && (
                   <Form.Slot
                     label={
                       <div className='flex items-center gap-2'>

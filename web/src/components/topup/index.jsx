@@ -38,6 +38,7 @@ import InvitationCard from './InvitationCard';
 import TransferModal from './modals/TransferModal';
 import PaymentConfirmModal from './modals/PaymentConfirmModal';
 import TopupHistoryModal from './modals/TopupHistoryModal';
+import Web3Payment from './Web3Payment';
 
 const TopUp = () => {
   const { t } = useTranslation();
@@ -61,6 +62,7 @@ const TopUp = () => {
   const [enableStripeTopUp, setEnableStripeTopUp] = useState(
     statusState?.status?.enable_stripe_topup || false,
   );
+  const [enableWeb3TopUp, setEnableWeb3TopUp] = useState(false);
   const [statusLoading, setStatusLoading] = useState(true);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -81,6 +83,9 @@ const TopUp = () => {
   // 账单Modal状态
   const [openHistory, setOpenHistory] = useState(false);
 
+  // Web3 支付Modal状态
+  const [showWeb3Modal, setShowWeb3Modal] = useState(false);
+
   // 预设充值额度选项
   const [presetAmounts, setPresetAmounts] = useState([]);
   const [selectedPreset, setSelectedPreset] = useState(null);
@@ -90,6 +95,16 @@ const TopUp = () => {
     amount_options: [],
     discount: {},
   });
+
+  // Web3 支付成功回调
+  const handleWeb3Success = () => {
+    setShowWeb3Modal(false);
+    showSuccess(t('充值成功！'));
+    // 刷新用户额度
+    if (userState.user) {
+      userDispatch({ type: 'loadUser', payload: userState.user });
+    }
+  };
 
   const topUp = async () => {
     if (redemptionCode === '') {
@@ -136,6 +151,16 @@ const TopUp = () => {
   };
 
   const preTopUp = async (payment) => {
+    // Web3 USDC 支付
+    if (payment === 'web3_usdc') {
+      if (topUpCount < minTopUp) {
+        showError(t('充值数量不能小于') + minTopUp);
+        return;
+      }
+      setShowWeb3Modal(true);
+      return;
+    }
+
     if (payment === 'stripe') {
       if (!enableStripeTopUp) {
         showError(t('管理员未开启Stripe充值！'));
@@ -322,13 +347,19 @@ const TopUp = () => {
           setPayMethods(payMethods);
           const enableStripeTopUp = data.enable_stripe_topup || false;
           const enableOnlineTopUp = data.enable_online_topup || false;
+          const enableWeb3TopUp = data.enable_web3_topup || false;
+          
           const minTopUpValue = enableOnlineTopUp
             ? data.min_topup
             : enableStripeTopUp
               ? data.stripe_min_topup
-              : 1;
+              : enableWeb3TopUp
+                ? data.web3_min_topup || 1
+                : 1;
+          
           setEnableOnlineTopUp(enableOnlineTopUp);
           setEnableStripeTopUp(enableStripeTopUp);
+          setEnableWeb3TopUp(enableWeb3TopUp);
           setMinTopUp(minTopUpValue);
           setTopUpCount(minTopUpValue);
 
@@ -572,6 +603,7 @@ const TopUp = () => {
               t={t}
               enableOnlineTopUp={enableOnlineTopUp}
               enableStripeTopUp={enableStripeTopUp}
+              enableWeb3TopUp={enableWeb3TopUp}
               presetAmounts={presetAmounts}
               selectedPreset={selectedPreset}
               selectPresetAmount={selectPresetAmount}
@@ -616,6 +648,14 @@ const TopUp = () => {
           </div>
         </div>
       </div>
+
+      {/* Web3 USDC 支付弹窗 */}
+      <Web3Payment
+        visible={showWeb3Modal}
+        amount={topUpCount}
+        onCancel={() => setShowWeb3Modal(false)}
+        onSuccess={handleWeb3Success}
+      />
     </div>
   );
 };
