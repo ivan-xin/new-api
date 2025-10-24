@@ -22,13 +22,13 @@ import injectedModule from '@web3-onboard/injected-wallets';
 import walletConnectModule from '@web3-onboard/walletconnect';
 import coinbaseWalletModule from '@web3-onboard/coinbase';
 import { 
-  SUPPORTED_CHAINS, 
-  WALLETCONNECT_CHAINS, 
+  getAvailableChains,
+  getAvailableChainIds, 
   WALLETCONNECT_PROJECT_ID 
 } from '../constants/web3.constants';
 
-// 支持的链配置（从配置文件导入）
-const chains = SUPPORTED_CHAINS.map(chain => ({
+// 支持的链配置（从配置文件导入，根据环境过滤测试网）
+const chains = getAvailableChains().map(chain => ({
   id: chain.id,
   token: chain.token,
   label: chain.label,
@@ -40,7 +40,7 @@ const injected = injectedModule();
 
 const walletConnect = walletConnectModule({
   projectId: WALLETCONNECT_PROJECT_ID, // 从配置文件导入
-  requiredChains: WALLETCONNECT_CHAINS,
+  requiredChains: getAvailableChainIds(),
   dappUrl: window.location.origin
 });
 

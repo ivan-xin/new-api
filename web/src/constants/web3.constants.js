@@ -222,8 +222,17 @@ export const USDC_ABI = [
 
 /**
  * WalletConnect 需要的链ID列表（十进制）
+ * 注意：这是静态导出，在实际使用时应该调用 getAvailableChainIds()
  */
 export const WALLETCONNECT_CHAINS = SUPPORTED_CHAINS.map(chain => chain.chainId);
+
+/**
+ * 获取可用的链ID列表（十进制，用于 WalletConnect）
+ * @returns {Array<number>} 可用的链ID列表
+ */
+export function getAvailableChainIds() {
+  return getAvailableChains().map(chain => chain.chainId);
+}
 
 /**
  * WalletConnect Project ID
@@ -292,6 +301,42 @@ export function getMainnetChains() {
  */
 export function getTestnetChains() {
   return SUPPORTED_CHAINS.filter(chain => chain.isTestnet);
+}
+
+/**
+ * 检查是否启用测试网
+ * 通过环境变量 VITE_ENABLE_TESTNET 控制
+ * 默认为 false（生产环境不启用测试网）
+ * @returns {boolean} 是否启用测试网
+ */
+export function isTestnetEnabled() {
+  const envValue = import.meta.env.VITE_ENABLE_TESTNET;
+  if (envValue === undefined || envValue === null || envValue === '') {
+    return false; // 默认禁用测试网
+  }
+  return envValue === 'true' || envValue === '1' || envValue === true;
+}
+
+/**
+ * 获取可用的链配置列表（根据环境变量过滤测试网）
+ * 如果 VITE_ENABLE_TESTNET 为 false（默认），则只返回主网链
+ * @returns {Array} 可用的链配置列表
+ */
+export function getAvailableChains() {
+  if (isTestnetEnabled()) {
+    return SUPPORTED_CHAINS;
+  }
+  return getMainnetChains();
+}
+
+/**
+ * 检查指定链ID是否为测试网
+ * @param {string} chainId - 十六进制链ID
+ * @returns {boolean} 是否为测试网
+ */
+export function isTestnetChain(chainId) {
+  const chain = getChainConfig(chainId);
+  return chain ? chain.isTestnet : false;
 }
 
 /**

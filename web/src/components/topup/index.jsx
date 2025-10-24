@@ -324,6 +324,17 @@ const TopUp = () => {
                 }
               }
 
+              // Web3 USDC 的最小充值从后端字段回填
+              if (
+                method.type === 'web3_usdc' &&
+                (!method.min_topup || method.min_topup <= 0)
+              ) {
+                const web3Min = Number(data.web3_min_topup);
+                if (Number.isFinite(web3Min)) {
+                  method.min_topup = web3Min;
+                }
+              }
+
               if (!method.color) {
                 if (method.type === 'alipay') {
                   method.color = 'rgba(var(--semi-blue-5), 1)';
@@ -349,13 +360,23 @@ const TopUp = () => {
           const enableOnlineTopUp = data.enable_online_topup || false;
           const enableWeb3TopUp = data.enable_web3_topup || false;
           
-          const minTopUpValue = enableOnlineTopUp
-            ? data.min_topup
-            : enableStripeTopUp
-              ? data.stripe_min_topup
-              : enableWeb3TopUp
-                ? data.web3_min_topup || 1
-                : 1;
+          // 计算最小充值金额：找到所有启用的支付方式中最小的最小值
+          // 这样用户可以输入较小金额，不满足条件的支付按钮会被禁用
+          const minTopUpValues = [];
+          if (enableOnlineTopUp && data.min_topup) {
+            minTopUpValues.push(Number(data.min_topup));
+          }
+          if (enableStripeTopUp && data.stripe_min_topup) {
+            minTopUpValues.push(Number(data.stripe_min_topup));
+          }
+          if (enableWeb3TopUp) {
+            minTopUpValues.push(Number(data.web3_min_topup) || 10);
+          }
+          
+          // 取所有启用支付方式中的最小值
+          const minTopUpValue = minTopUpValues.length > 0 
+            ? Math.min(...minTopUpValues) 
+            : 1;
           
           setEnableOnlineTopUp(enableOnlineTopUp);
           setEnableStripeTopUp(enableStripeTopUp);

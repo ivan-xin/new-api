@@ -23,7 +23,7 @@ import { API, showError, showSuccess, showWarning, compareObjects } from '../../
 import { useTranslation } from 'react-i18next';
 import { CircleDollarSign, AlertCircle } from 'lucide-react';
 import { 
-  SUPPORTED_CHAINS, 
+  getAvailableChains, 
   RPC_CONFIG_FIELDS,
   getSupportedChainNames,
   formatChainLabel 
@@ -37,8 +37,12 @@ export default function SettingsPaymentGatewayWeb3(props) {
   
   // 动态生成初始状态（基于配置文件）
   const getInitialInputs = () => {
-    const inputs = { Web3ReceiverAddress: '' };
-    SUPPORTED_CHAINS.forEach(chain => {
+    const inputs = { 
+      Web3ReceiverAddress: '',
+      Web3MinTopup: 10  // 默认最小充值 10 USDC
+    };
+    const availableChains = getAvailableChains();
+    availableChains.forEach(chain => {
       const fieldName = RPC_CONFIG_FIELDS[chain.name];
       if (fieldName) {
         inputs[fieldName] = '';
@@ -53,14 +57,22 @@ export default function SettingsPaymentGatewayWeb3(props) {
 
   useEffect(() => {
     const currentInputs = {};
+    const availableChains = getAvailableChains();
     
     // 收款地址
     if (props.options['Web3ReceiverAddress'] !== undefined) {
       currentInputs['Web3ReceiverAddress'] = props.options['Web3ReceiverAddress'];
     }
     
+    // 最小充值金额
+    if (props.options['Web3MinTopup'] !== undefined) {
+      currentInputs['Web3MinTopup'] = parseInt(props.options['Web3MinTopup']) || 10;
+    } else {
+      currentInputs['Web3MinTopup'] = 10;
+    }
+    
     // 动态加载各链的RPC配置
-    SUPPORTED_CHAINS.forEach(chain => {
+    availableChains.forEach(chain => {
       const fieldName = RPC_CONFIG_FIELDS[chain.name];
       if (fieldName && props.options[fieldName] !== undefined) {
         currentInputs[fieldName] = props.options[fieldName];
@@ -81,6 +93,8 @@ export default function SettingsPaymentGatewayWeb3(props) {
     const requestQueue = updateArray.map((item) => {
       let value = '';
       if (typeof inputs[item.key] === 'boolean') {
+        value = String(inputs[item.key]);
+      } else if (typeof inputs[item.key] === 'number') {
         value = String(inputs[item.key]);
       } else {
         value = inputs[item.key];
@@ -174,7 +188,7 @@ export default function SettingsPaymentGatewayWeb3(props) {
                 <br />
                 <Text type='secondary' style={{ fontSize: '13px' }}>
                   {t('• 支持的链: ' + 
-                    SUPPORTED_CHAINS.map(chain => 
+                    getAvailableChains().map(chain => 
                       chain.label + (chain.isRecommended ? ' (推荐)' : '')
                     ).join(', ')
                   )}
@@ -186,7 +200,7 @@ export default function SettingsPaymentGatewayWeb3(props) {
 
         <Form.Section text={t('收款配置')}>
           <Row gutter={16}>
-            <Col span={24}>
+            <Col xs={24} sm={24} md={16}>
               <Form.Input
                 field='Web3ReceiverAddress'
                 label={t('收款地址')}
@@ -209,12 +223,35 @@ export default function SettingsPaymentGatewayWeb3(props) {
                 showClear
               />
             </Col>
+            <Col xs={24} sm={24} md={8}>
+              <Form.InputNumber
+                field='Web3MinTopup'
+                label={t('最小充值金额')}
+                placeholder={t('10')}
+                value={inputs.Web3MinTopup}
+                onChange={(value) => handleInputChange('Web3MinTopup', value)}
+                min={10}
+                suffix='USDC'
+                rules={[
+                  {
+                    type: 'number',
+                    min: 10,
+                    message: t('最小充值金额不能低于 10 USDC'),
+                  },
+                ]}
+                extraText={
+                  <Text type='tertiary' size='small'>
+                    {t('最小充值 10 USDC')}
+                  </Text>
+                }
+              />
+            </Col>
           </Row>
         </Form.Section>
 
         <Form.Section text={t('RPC 节点配置（可选）')}>
           <Row gutter={16}>
-            {SUPPORTED_CHAINS.map((chain, index) => {
+            {getAvailableChains().map((chain, index) => {
               const fieldName = RPC_CONFIG_FIELDS[chain.name];
               if (!fieldName) return null;
               

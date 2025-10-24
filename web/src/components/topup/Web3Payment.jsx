@@ -30,7 +30,10 @@ import {
   CHAIN_LABELS,
   DEFAULT_CHAIN_NAME,
   isChainSupported,
-  getChainConfig
+  getChainConfig,
+  isTestnetChain,
+  getAvailableChains,
+  isTestnetEnabled
 } from '../../constants/web3.constants';
 
 const { Text, Title } = Typography;
@@ -44,6 +47,19 @@ export default function Web3Payment({ amount, visible, onCancel, onSuccess }) {
   const chainId = wallet?.chains[0]?.id;
   const account = wallet?.accounts[0]?.address;
   const chainName = CHAIN_NAMES[chainId] || DEFAULT_CHAIN_NAME;
+  
+  // 检查当前连接的链是否为测试网
+  const isTestnet = chainId ? isTestnetChain(chainId) : false;
+  const currentChainConfig = chainId ? getChainConfig(chainId) : null;
+  
+  // 获取可用的主网链列表
+  const availableChains = getAvailableChains();
+  
+  // 检查是否允许测试网（根据环境变量）
+  const testnetAllowed = isTestnetEnabled();
+  
+  // 只有在测试网未启用且当前是测试网时才显示警告
+  const shouldWarnTestnet = isTestnet && !testnetAllowed;
 
   // 获取 USDC 余额
   useEffect(() => {
@@ -121,6 +137,12 @@ export default function Web3Payment({ amount, visible, onCancel, onSuccess }) {
   const handlePay = async () => {
     if (!wallet) {
       Toast.error('请先连接钱包');
+      return;
+    }
+
+    // 只在测试网未启用时检查并拒绝测试网
+    if (shouldWarnTestnet) {
+      Toast.error('生产环境禁止使用测试网充值，请切换到主网');
       return;
     }
 
@@ -244,6 +266,42 @@ export default function Web3Payment({ amount, visible, onCancel, onSuccess }) {
 
     return (
       <Space vertical spacing="loose" style={{ width: '100%' }}>
+        {/* 测试网警告 - 只在禁用测试网时显示 */}
+        {shouldWarnTestnet && (
+          <Card 
+            bodyStyle={{ 
+              padding: 16,
+              background: 'var(--semi-color-warning-light-default)',
+              border: '2px solid var(--semi-color-warning)'
+            }}
+          >
+            <Space vertical spacing="tight" style={{ width: '100%' }}>
+              <Text strong style={{ color: 'var(--semi-color-warning-dark)', fontSize: 16 }}>
+                ⚠️ 警告：您当前连接的是测试网
+              </Text>
+              <Text type="tertiary">
+                当前网络：<Text strong>{currentChainConfig?.label || chainName}</Text>（测试网）
+              </Text>
+              <Text type="tertiary">
+                生产环境禁止使用测试网充值。请切换到主网（如 Base、Arbitrum One 等）后再进行充值操作。
+              </Text>
+              {availableChains.length > 0 && (
+                <Select
+                  placeholder="选择要切换的主网"
+                  style={{ width: '100%', marginTop: 8 }}
+                  onChange={(value) => switchToChain(value)}
+                >
+                  {availableChains.map(chain => (
+                    <Select.Option key={chain.id} value={chain.id}>
+                      {chain.label} {chain.isRecommended && '(推荐)'}
+                    </Select.Option>
+                  ))}
+                </Select>
+              )}
+            </Space>
+          </Card>
+        )}
+        
         {/* 钱包信息 */}
         <Card bodyStyle={{ padding: 16 }}>
           <Space vertical spacing="tight" style={{ width: '100%' }}>
@@ -351,13 +409,14 @@ export default function Web3Payment({ amount, visible, onCancel, onSuccess }) {
             onClick={handlePay}
             loading={loading}
             disabled={
+              shouldWarnTestnet ||
               !USDC_CONTRACTS[chainId] ||
               !payInfo ||
               parseFloat(balance) < parseFloat(payInfo.amount_usdc || 0)
             }
             style={{ flex: 2 }}
           >
-            {loading ? '处理中...' : '立即支付'}
+            {loading ? '处理中...' : shouldWarnTestnet ? '测试网禁止充值' : '立即支付'}
           </Button>
         </Space>
 

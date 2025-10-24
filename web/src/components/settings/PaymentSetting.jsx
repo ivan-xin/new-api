@@ -25,7 +25,7 @@ import SettingsPaymentGatewayStripe from '../../pages/Setting/Payment/SettingsPa
 import SettingsPaymentGatewayWeb3 from '../../pages/Setting/Payment/SettingsPaymentGatewayWeb3';
 import { API, showError, toBoolean } from '../../helpers';
 import { useTranslation } from 'react-i18next';
-import { SUPPORTED_CHAINS, RPC_CONFIG_FIELDS } from '../../constants/web3.constants';
+import { getAvailableChains, RPC_CONFIG_FIELDS } from '../../constants/web3.constants';
 
 const PaymentSetting = () => {
   const { t } = useTranslation();
@@ -33,7 +33,8 @@ const PaymentSetting = () => {
   // 动态生成Web3 RPC字段的初始状态
   const getInitialWeb3Fields = () => {
     const fields = { Web3ReceiverAddress: '' };
-    SUPPORTED_CHAINS.forEach(chain => {
+    const availableChains = getAvailableChains();
+    availableChains.forEach(chain => {
       const fieldName = RPC_CONFIG_FIELDS[chain.name];
       if (fieldName) {
         fields[fieldName] = '';

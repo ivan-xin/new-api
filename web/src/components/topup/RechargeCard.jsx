@@ -17,7 +17,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 For commercial licensing, please contact support@quantumnous.com
 */
 
-import React, { useRef } from 'react';
+import React, { useRef, useEffect } from 'react';
 import {
   Avatar,
   Typography,
@@ -86,6 +86,7 @@ const RechargeCard = ({
   const onlineFormApiRef = useRef(null);
   const redeemFormApiRef = useRef(null);
   const showAmountSkeleton = useMinimumLoadingTime(amountLoading);
+  
   return (
     <Card className='!rounded-2xl shadow-sm border-0'>
       {/* 卡片头部 */}
@@ -234,23 +235,23 @@ const RechargeCard = ({
                         placeholder={
                           t('充值数量，最低 ') + renderQuotaWithAmount(minTopUp)
                         }
-                        value={topUpCount}
                         min={minTopUp}
                         max={999999999}
                         step={1}
                         precision={0}
                         onChange={async (value) => {
-                          if (value && value >= 1) {
+                          if (Number.isFinite(value) && value >= 1) {
                             setTopUpCount(value);
                             setSelectedPreset(null);
                             await getAmount(value);
                           }
                         }}
-                        onBlur={(e) => {
-                          const value = parseInt(e.target.value);
-                          if (!value || value < 1) {
-                            setTopUpCount(1);
-                            getAmount(1);
+                        onBlur={() => {
+                          const value = onlineFormApiRef.current?.getValue('topUpCount') || 0;
+                          if (!Number.isFinite(value) || value < minTopUp) {
+                            onlineFormApiRef.current?.setValue('topUpCount', minTopUp);
+                            setTopUpCount(minTopUp);
+                            getAmount(minTopUp);
                           }
                         }}
                         formatter={(value) => (value ? `${value}` : '')}
