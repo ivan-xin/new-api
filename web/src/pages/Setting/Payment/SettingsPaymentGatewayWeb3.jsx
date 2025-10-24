@@ -167,23 +167,19 @@ export default function SettingsPaymentGatewayWeb3(props) {
             <AlertCircle size={16} color='var(--semi-color-primary)' />
             <div>
               <Text strong style={{ color: 'var(--semi-color-primary)' }}>
-                {t('配置说明')}
+                {t('Web3 配置说明')}
               </Text>
               <div style={{ marginTop: '8px' }}>
                 <Text type='secondary' style={{ fontSize: '13px' }}>
-                  {t(
-                    '• 收款地址: 必填，用于接收用户支付的 USDC（确保你拥有该地址的私钥）',
-                  )}
+                  {t('Web3 收款地址说明')}
                 </Text>
                 <br />
                 <Text type='secondary' style={{ fontSize: '13px' }}>
-                  {t(
-                    '• RPC 节点: 可选，推荐配置以提高交易验证速度和稳定性',
-                  )}
+                  {t('Web3 RPC 节点说明')}
                 </Text>
                 <br />
                 <Text type='secondary' style={{ fontSize: '13px' }}>
-                  {t('• 推荐 RPC 服务: Infura, Alchemy, QuickNode, Ankr')}
+                  {t('Web3 推荐 RPC 服务')}
                 </Text>
                 <br />
                 <Text type='secondary' style={{ fontSize: '13px' }}>
@@ -291,19 +287,19 @@ export default function SettingsPaymentGatewayWeb3(props) {
           </Text>
           <div style={{ marginTop: '8px' }}>
             <Text style={{ fontSize: '13px' }}>
-              {t('• 请确保收款地址正确，并妥善保管私钥')}
+              {t('Web3 安全提示 1')}
             </Text>
             <br />
             <Text style={{ fontSize: '13px' }}>
-              {t('• 建议定期将收到的 USDC 转移至冷钱包')}
+              {t('Web3 安全提示 2')}
             </Text>
             <br />
             <Text style={{ fontSize: '13px' }}>
-              {t('• RPC 节点配置为可选，不填写将使用默认公共节点')}
+              {t('Web3 安全提示 3')}
             </Text>
             <br />
             <Text style={{ fontSize: '13px' }}>
-              {t('• 保存后立即生效，无需重启服务')}
+              {t('Web3 安全提示 4')}
             </Text>
           </div>
         </div>
