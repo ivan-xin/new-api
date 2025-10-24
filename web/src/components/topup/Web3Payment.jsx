@@ -45,7 +45,7 @@ export default function Web3Payment({ amount, visible, onCancel, onSuccess }) {
   const [loading, setLoading] = useState(false);
   const [payInfo, setPayInfo] = useState(null);
   const [balance, setBalance] = useState('0');
-  const [modalVisible, setModalVisible] = useState(visible);
+  const [modalVisible, setModalVisible] = useState(false);
 
   const chainId = wallet?.chains[0]?.id;
   const account = wallet?.accounts[0]?.address;
@@ -66,16 +66,20 @@ export default function Web3Payment({ amount, visible, onCancel, onSuccess }) {
 
   // 同步外部 visible 到内部 modalVisible
   useEffect(() => {
-    setModalVisible(visible);
+    if (visible) {
+      setModalVisible(true);
+    } else {
+      setModalVisible(false);
+    }
   }, [visible]);
 
   // 监听钱包连接状态，连接完成后恢复显示 Modal
   useEffect(() => {
-    if (wallet && !connecting) {
-      // 钱包连接成功，恢复显示 Modal
+    if (wallet && !connecting && visible) {
+      // 钱包连接成功，且父组件 visible 为 true 时，恢复显示 Modal
       setModalVisible(true);
     }
-  }, [wallet, connecting]);
+  }, [wallet, connecting, visible]);
 
   // 获取 USDC 余额
   useEffect(() => {
