@@ -817,3 +817,24 @@ html.dark .with-pastel-balls::before {
 .semi-datepicker-range-input {
   border-radius: 10px !important;
 }
+
+/* ==================== Web3-Onboard 钱包选择界面样式 ==================== */
+/* 确保 Web3-Onboard 钱包选择模态框显示在最前面 */
+onboard-connect-modal,
+[data-onboard-connect-modal],
+onboard-account-center,
+[data-onboard-account-center] {
+  z-index: 9999 !important;
+}
+
+/* Web3-Onboard 模态框覆盖层 */
+.onboard-modal-overlay {
+  z-index: 9998 !important;
+}
+
+/* 确保 Web3-Onboard 的所有子元素也有足够高的 z-index */
+.onboard-modal,
+.onboard-wallet-button,
+.onboard-connect-sidebar {
+  z-index: 9999 !important;
+}
