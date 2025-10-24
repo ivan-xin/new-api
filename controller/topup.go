@@ -56,36 +56,39 @@ func GetTopUpInfo(c *gin.Context) {
 	}
 
 	// 如果配置了 Web3 收款地址，添加 Web3 USDC 支付方式
-	common.SysLog(fmt.Sprintf("[DEBUG] Checking Web3ReceiverAddress, OptionMap has %d keys", len(common.OptionMap)))
-	if receiverAddr, ok := common.OptionMap["Web3ReceiverAddress"]; ok {
-		common.SysLog(fmt.Sprintf("[DEBUG] Web3ReceiverAddress found: %s", receiverAddr))
-		if receiverAddr != "" {
-			// 检查是否已经包含 Web3 USDC
-			hasWeb3 := false
-			for _, method := range payMethods {
-				if method["type"] == "web3_usdc" {
-					hasWeb3 = true
-					break
-				}
+	if receiverAddr, ok := common.OptionMap["Web3ReceiverAddress"]; ok && receiverAddr != "" {
+		// 检查是否已经包含 Web3 USDC
+		hasWeb3 := false
+		for _, method := range payMethods {
+			if method["type"] == "web3_usdc" {
+				hasWeb3 = true
+				break
+			}
+		}
+
+		if !hasWeb3 {
+			// 读取配置的最小充值金额，默认 10
+			minTopup := "10"
+			if minTopupStr, ok := common.OptionMap["Web3MinTopup"]; ok && minTopupStr != "" {
+				minTopup = minTopupStr
 			}
 
-			if !hasWeb3 {
-				web3Method := map[string]string{
-					"name":      "USDC",
-					"type":      "web3_usdc",
-					"color":     "#2775CA",
-					"min_topup": "10", // Web3 USDC 最低充值 10 USD
-				}
-				payMethods = append(payMethods, web3Method)
-				common.SysLog("[DEBUG] Web3 USDC payment method added")
-			} else {
-				common.SysLog("[DEBUG] Web3 USDC already exists in payMethods")
+			web3Method := map[string]string{
+				"name":      "USDC",
+				"type":      "web3_usdc",
+				"color":     "#2775CA",
+				"min_topup": minTopup,
 			}
-		} else {
-			common.SysLog("[DEBUG] Web3ReceiverAddress is empty")
+			payMethods = append(payMethods, web3Method)
 		}
-	} else {
-		common.SysLog("[DEBUG] Web3ReceiverAddress not found in OptionMap")
+	}
+
+	// 读取配置的 Web3 最小充值金额，默认 10
+	web3MinTopup := 10
+	if minTopupStr, ok := common.OptionMap["Web3MinTopup"]; ok && minTopupStr != "" {
+		if customMinTopup, err := strconv.Atoi(minTopupStr); err == nil && customMinTopup > 0 {
+			web3MinTopup = customMinTopup
+		}
 	}
 
 	data := gin.H{
@@ -95,7 +98,7 @@ func GetTopUpInfo(c *gin.Context) {
 		"pay_methods":         payMethods,
 		"min_topup":           operation_setting.MinTopUp,
 		"stripe_min_topup":    setting.StripeMinTopUp,
-		"web3_min_topup":      10,
+		"web3_min_topup":      web3MinTopup,
 		"amount_options":      operation_setting.GetPaymentSetting().AmountOptions,
 		"discount":            operation_setting.GetPaymentSetting().AmountDiscount,
 	}

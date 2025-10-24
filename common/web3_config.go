@@ -36,6 +36,13 @@ type ChainConfig struct {
 	USDCContract          string // USDC合约地址
 }
 
+// IsTestnetEnabled 检查是否启用测试网
+// 通过环境变量 WEB3_ENABLE_TESTNET 控制
+// 默认为 false（生产环境不启用测试网）
+func IsTestnetEnabled() bool {
+	return GetEnvOrDefaultBool("WEB3_ENABLE_TESTNET", false)
+}
+
 // SupportedChains 支持的链配置列表
 var SupportedChains = []ChainConfig{
 	// ========== 主网 Mainnet ==========
@@ -187,6 +194,16 @@ func IsChainSupported(chainName string) bool {
 	return ok
 }
 
+// IsTestnetChain 检查指定链是否为测试网
+func IsTestnetChain(chainName string) bool {
+	for _, chain := range SupportedChains {
+		if chain.Name == chainName {
+			return chain.IsTestnet
+		}
+	}
+	return false
+}
+
 // GetSupportedChainNames 获取所有支持的链名称
 func GetSupportedChainNames() []string {
 	names := make([]string, 0, len(SupportedChains))
@@ -232,4 +249,23 @@ func GetTestnetChains() []ChainConfig {
 // GetDefaultChainConfig 获取默认链配置
 func GetDefaultChainConfig() *ChainConfig {
 	return GetChainConfig(DefaultChainName)
+}
+
+// GetAvailableChains 获取可用的链配置列表（根据环境变量过滤测试网）
+// 如果 WEB3_ENABLE_TESTNET 为 false（默认），则只返回主网链
+func GetAvailableChains() []ChainConfig {
+	if IsTestnetEnabled() {
+		return SupportedChains
+	}
+	return GetMainnetChains()
+}
+
+// GetAvailableChainNames 获取可用的链名称列表（根据环境变量过滤测试网）
+func GetAvailableChainNames() []string {
+	chains := GetAvailableChains()
+	names := make([]string, 0, len(chains))
+	for _, chain := range chains {
+		names = append(names, chain.Name)
+	}
+	return names
 }

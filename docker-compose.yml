@@ -52,6 +52,12 @@ services:
       # - 最小充值金额 (MinTopUp): 最小充值金额
       # - 充值价格 (Price): 每单位价格
       # 易支付不需要在环境变量中配置，在Web管理后台配置即可
+      
+      # Web3 USDC 支付配置
+      # 是否启用测试网链 (Base Sepolia)，生产环境必须设置为 false
+      # Enable testnet chains (Base Sepolia). MUST be false in production!
+      - WEB3_ENABLE_TESTNET=true  # 默认false，生产环境不要修改！(Default false, DO NOT change in production!)
+      
 #      - SYNC_FREQUENCY=60  # Uncomment if regular database syncing is needed
 #      - GOOGLE_ANALYTICS_ID=G-XXXXXXXXXX  # Google Analytics 的测量 ID (Google Analytics Measurement ID)
 #      - UMAMI_WEBSITE_ID=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx  # Umami 网站 ID (Umami Website ID)

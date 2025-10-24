@@ -129,6 +129,12 @@ func RequestWeb3Pay(c *gin.Context) {
 		return
 	}
 
+	// 检查是否为测试网（只在测试网未启用时拒绝）
+	if common.IsTestnetChain(req.Chain) && !common.IsTestnetEnabled() {
+		c.JSON(200, gin.H{"message": "error", "data": "生产环境禁止使用测试网充值，请切换到主网"})
+		return
+	}
+
 	id := c.GetInt("id")
 	group, err := model.GetUserGroup(id, true)
 	if err != nil {
@@ -403,7 +409,17 @@ func getWeb3PayMoney(amount float64, group string) float64 {
 }
 
 func getWeb3MinTopup() int64 {
-	minTopup := 5 // 默认最小充值 5
+	// 默认最小充值 10 USDC
+	// 可以通过配置项 Web3MinTopup 自定义
+	minTopup := 10
+
+	// 从配置读取自定义的最小充值金额
+	if minTopupStr, ok := common.OptionMap["Web3MinTopup"]; ok && minTopupStr != "" {
+		if customMinTopup, err := strconv.Atoi(minTopupStr); err == nil && customMinTopup > 0 {
+			minTopup = customMinTopup
+		}
+	}
+
 	if operation_setting.GetQuotaDisplayType() == operation_setting.QuotaDisplayTypeTokens {
 		minTopup = minTopup * int(common.QuotaPerUnit)
 	}
