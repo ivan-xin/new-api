@@ -58,6 +58,9 @@ func SetApiRouter(router *gin.Engine) {
 			userRoute.GET("/epay/notify", controller.EpayNotify)
 			userRoute.GET("/groups", controller.GetUserGroups)
 
+			// 外部服务查询用户额度信息 (需要管理员权限)
+			userRoute.GET("/quota_info", middleware.AdminAuth(), controller.GetUserQuotaInfo)
+
 			selfRoute := userRoute.Group("/")
 			selfRoute.Use(middleware.UserAuth())
 			{
@@ -115,6 +118,15 @@ func SetApiRouter(router *gin.Engine) {
 				adminRoute.DELETE("/:id/2fa", controller.AdminDisable2FA)
 			}
 		}
+
+		// Admin Web3 Payment Routes (外部服务集成)
+		adminWeb3Route := apiRouter.Group("/admin/web3")
+		adminWeb3Route.Use(middleware.AdminAuth())
+		{
+			adminWeb3Route.POST("/pay", middleware.CriticalRateLimit(), controller.AdminRequestWeb3Pay)
+			adminWeb3Route.POST("/verify", controller.AdminVerifyWeb3Transaction)
+		}
+
 		optionRoute := apiRouter.Group("/option")
 		optionRoute.Use(middleware.RootAuth())
 		{

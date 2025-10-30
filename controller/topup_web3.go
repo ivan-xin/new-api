@@ -291,11 +291,19 @@ func VerifyWeb3Transaction(c *gin.Context) {
 		return
 	}
 
+	// 从合约查询实际的小数位数
+	contractDecimals, err := getContractDecimals(client, usdcContract)
+	if err != nil {
+		log.Printf("获取合约小数位数失败: %v, 使用默认值 %d", err, USDCDecimals)
+		contractDecimals = USDCDecimals
+	}
+
 	// 检查金额是否匹配
 	expectedAmount := decimal.NewFromFloat(topUp.Money)
-	actualAmount := decimal.NewFromBigInt(amount, -USDCDecimals)
+	actualAmount := decimal.NewFromBigInt(amount, -int32(contractDecimals))
 
-	log.Printf("Web3支付验证: 期望 %.6f USDC, 实际 %s USDC", expectedAmount.InexactFloat64(), actualAmount.String())
+	log.Printf("Web3支付验证: 合约小数位: %d, 期望 %.6f USDC, 实际 %.6f USDC",
+		contractDecimals, expectedAmount.InexactFloat64(), actualAmount.InexactFloat64())
 
 	if actualAmount.LessThan(expectedAmount) {
 		c.JSON(200, gin.H{"message": "error", "data": "支付金额不足"})
@@ -331,10 +339,10 @@ func VerifyWeb3Transaction(c *gin.Context) {
 	}
 
 	model.RecordLog(topUp.UserId, model.LogTypeTopup,
-		fmt.Sprintf("使用Web3 USDC充值成功，链: %s，交易: %s，充值金额: %s USDC，获得额度：%s",
-			req.Chain, req.TxHash, actualAmount.String(), logger.LogQuota(quotaToAdd)))
+		fmt.Sprintf("使用Web3 USDC充值成功，链: %s，交易: %s，充值金额: %.6f USDC，获得额度：%s",
+			req.Chain, req.TxHash, actualAmount.InexactFloat64(), logger.LogQuota(quotaToAdd)))
 
-	log.Printf("Web3充值成功: 用户 %d, 订单 %s, 金额 %s USDC, 额度 %d", topUp.UserId, req.TradeNo, actualAmount.String(), quotaToAdd)
+	log.Printf("Web3充值成功: 用户 %d, 订单 %s, 金额 %.6f USDC, 额度 %d", topUp.UserId, req.TradeNo, actualAmount.InexactFloat64(), quotaToAdd)
 
 	c.JSON(200, gin.H{"message": "success", "data": "充值成功"})
 }
@@ -444,7 +452,7 @@ func getWeb3RPCURL(chain string) string {
 		}
 	}
 
-	// 如果没有配置，则使用配置文件中的默认公共 RPC
+	// 如果没有配置,则使用配置文件中的默认公共 RPC
 	chainConfig := common.GetChainConfig(chain)
 	if chainConfig != nil {
 		return chainConfig.RpcURL

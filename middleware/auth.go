@@ -72,32 +72,55 @@ func authHelper(c *gin.Context, minRole int) {
 	}
 	// get header New-Api-User
 	apiUserIdStr := c.Request.Header.Get("New-Api-User")
-	if apiUserIdStr == "" {
-		c.JSON(http.StatusUnauthorized, gin.H{
-			"success": false,
-			"message": "无权进行此操作，未提供 New-Api-User",
-		})
-		c.Abort()
-		return
-	}
-	apiUserId, err := strconv.Atoi(apiUserIdStr)
-	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{
-			"success": false,
-			"message": "无权进行此操作，New-Api-User 格式错误",
-		})
-		c.Abort()
-		return
 
+	// 如果使用 Access Token 且角色是管理员或以上，允许不提供或提供不同的 New-Api-User
+	// 这样管理员可以通过 Access Token 查询其他用户的信息
+	if useAccessToken && role.(int) >= common.RoleAdminUser {
+		// 管理员使用 Access Token 时，不强制要求 New-Api-User 匹配
+		if apiUserIdStr != "" {
+			// 如果提供了 New-Api-User，验证格式
+			apiUserId, err := strconv.Atoi(apiUserIdStr)
+			if err != nil {
+				c.JSON(http.StatusUnauthorized, gin.H{
+					"success": false,
+					"message": "无权进行此操作，New-Api-User 格式错误",
+				})
+				c.Abort()
+				return
+			}
+			// 但不要求必须与登录用户ID匹配（管理员特权）
+			_ = apiUserId
+		}
+	} else {
+		// 非管理员或非 Access Token 认证时，严格验证 New-Api-User
+		if apiUserIdStr == "" {
+			c.JSON(http.StatusUnauthorized, gin.H{
+				"success": false,
+				"message": "无权进行此操作，未提供 New-Api-User",
+			})
+			c.Abort()
+			return
+		}
+		apiUserId, err := strconv.Atoi(apiUserIdStr)
+		if err != nil {
+			c.JSON(http.StatusUnauthorized, gin.H{
+				"success": false,
+				"message": "无权进行此操作，New-Api-User 格式错误",
+			})
+			c.Abort()
+			return
+
+		}
+		if id != apiUserId {
+			c.JSON(http.StatusUnauthorized, gin.H{
+				"success": false,
+				"message": "无权进行此操作，New-Api-User 与登录用户不匹配",
+			})
+			c.Abort()
+			return
+		}
 	}
-	if id != apiUserId {
-		c.JSON(http.StatusUnauthorized, gin.H{
-			"success": false,
-			"message": "无权进行此操作，New-Api-User 与登录用户不匹配",
-		})
-		c.Abort()
-		return
-	}
+
 	if status.(int) == common.UserStatusDisabled {
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,

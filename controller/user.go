@@ -265,9 +265,14 @@ func Register(c *gin.Context) {
 		}
 	}
 
+	// 返回用户ID和用户名，方便外部服务后续操作
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"message": "",
+		"data": gin.H{
+			"id":       insertedUser.Id,
+			"username": insertedUser.Username,
+		},
 	})
 	return
 }
@@ -1288,5 +1293,69 @@ func UpdateUserSetting(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"message": "设置已更新",
+	})
+}
+
+// GetUserQuotaInfo 外部服务查询用户额度信息
+// 可通过 username 或 user_id 查询
+// 需要管理员权限或用户自己的 Access Token
+func GetUserQuotaInfo(c *gin.Context) {
+	// 支持两种查询方式
+	username := c.Query("username")
+	userIdStr := c.Query("user_id")
+
+	if username == "" && userIdStr == "" {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": "必须提供 username 或 user_id 参数",
+		})
+		return
+	}
+
+	var user model.User
+	var err error
+
+	// 根据参数查询用户
+	if userIdStr != "" {
+		userId, parseErr := strconv.Atoi(userIdStr)
+		if parseErr != nil {
+			c.JSON(http.StatusOK, gin.H{
+				"success": false,
+				"message": "无效的 user_id 参数",
+			})
+			return
+		}
+		err = model.DB.Where("id = ?", userId).First(&user).Error
+	} else {
+		err = model.DB.Where("username = ?", username).First(&user).Error
+	}
+
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": "用户不存在",
+		})
+		return
+	}
+
+	// 计算剩余额度
+	remainingQuota := user.Quota - user.UsedQuota
+	if remainingQuota < 0 {
+		remainingQuota = 0
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"message": "查询成功",
+		"data": gin.H{
+			"user_id":         user.Id,
+			"username":        user.Username,
+			"total_quota":     user.Quota,
+			"used_quota":      user.UsedQuota,
+			"remaining_quota": remainingQuota,
+			"request_count":   user.RequestCount,
+			"group":           user.Group,
+			"status":          user.Status,
+		},
 	})
 }
