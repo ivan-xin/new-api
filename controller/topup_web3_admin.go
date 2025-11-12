@@ -231,6 +231,24 @@ func AdminVerifyWeb3Transaction(c *gin.Context) {
 		return
 	}
 
+	// 反作弊 1：防止复用旧交易 - 匹配区块时间 >= 订单创建时间
+	if receipt.BlockNumber != nil {
+		blk, err := client.BlockByNumber(context.Background(), receipt.BlockNumber)
+		if err == nil {
+			blkTime := int64(blk.Time())
+			if blkTime < topUp.CreateTime {
+				c.JSON(200, gin.H{"message": "error", "data": "交易早于订单创建，疑似复用旧交易"})
+				return
+			}
+		}
+	}
+
+	// 反作弊 2：防止重复使用同一交易哈希
+	if existed := model.GetTopUpByTxHash(req.TxHash); existed != nil && existed.TradeNo != req.TradeNo {
+		c.JSON(200, gin.H{"message": "error", "data": "该交易哈希已被用于其他订单，无法重复入账"})
+		return
+	}
+
 	// 验证交易金额和接收地址
 	verified, amount, err := verifyUSDCTransfer(receipt, receiverAddress, usdcContract)
 	if err != nil {
@@ -261,14 +279,18 @@ func AdminVerifyWeb3Transaction(c *gin.Context) {
 	log.Printf("Web3支付验证: 订单 %s, 期望 %.6f USDC, 实际 %.6f USDC",
 		req.TradeNo, expectedAmount.InexactFloat64(), actualAmount.InexactFloat64())
 
-	if actualAmount.LessThan(expectedAmount) {
-		c.JSON(200, gin.H{"message": "error", "data": fmt.Sprintf("支付金额不足，需要 %.6f USDC，实际 %.6f USDC",
+	// 更严格：金额必须与订单一致，防止复用更早/更大的旧交易
+	if !actualAmount.Equal(expectedAmount) {
+		c.JSON(200, gin.H{"message": "error", "data": fmt.Sprintf("支付金额与订单金额不一致，需要 %.6f USDC，实际 %.6f USDC",
 			expectedAmount.InexactFloat64(), actualAmount.InexactFloat64())})
 		return
 	}
 
-	// 更新订单状态
+	// 更新订单状态并记录链上信息
 	topUp.Status = "success"
+	topUp.TxHash = &req.TxHash
+	topUp.Chain = &req.Chain
+	topUp.CompleteTime = time.Now().Unix()
 	metadata := map[string]string{
 		"chain":   req.Chain,
 		"tx_hash": req.TxHash,
@@ -279,7 +301,7 @@ func AdminVerifyWeb3Transaction(c *gin.Context) {
 	err = topUp.Update()
 	if err != nil {
 		log.Printf("更新Web3订单失败: %v", err)
-		c.JSON(200, gin.H{"message": "error", "data": "更新订单失败"})
+		c.JSON(200, gin.H{"message": "error", "data": "更新订单失败，可能为重复交易哈希"})
 		return
 	}
 

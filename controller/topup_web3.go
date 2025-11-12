@@ -278,6 +278,24 @@ func VerifyWeb3Transaction(c *gin.Context) {
 		return
 	}
 
+	// 反作弊 1：防止复用旧交易 - 校验区块时间应不早于订单创建时间
+	if receipt.BlockNumber != nil {
+		blk, err := client.BlockByNumber(context.Background(), receipt.BlockNumber)
+		if err == nil {
+			blkTime := int64(blk.Time())
+			if blkTime < topUp.CreateTime {
+				c.JSON(200, gin.H{"message": "error", "data": "交易早于订单创建，疑似复用旧交易"})
+				return
+			}
+		}
+	}
+
+	// 反作弊 2：防止重复使用同一交易哈希
+	if existed := model.GetTopUpByTxHash(req.TxHash); existed != nil && existed.TradeNo != req.TradeNo {
+		c.JSON(200, gin.H{"message": "error", "data": "该交易哈希已被用于其他订单，无法重复入账"})
+		return
+	}
+
 	// 验证交易金额和接收地址
 	verified, amount, err := verifyUSDCTransfer(receipt, receiverAddress, usdcContract)
 	if err != nil {
@@ -305,13 +323,17 @@ func VerifyWeb3Transaction(c *gin.Context) {
 	log.Printf("Web3支付验证: 合约小数位: %d, 期望 %.6f USDC, 实际 %.6f USDC",
 		contractDecimals, expectedAmount.InexactFloat64(), actualAmount.InexactFloat64())
 
-	if actualAmount.LessThan(expectedAmount) {
-		c.JSON(200, gin.H{"message": "error", "data": "支付金额不足"})
+	// 更严格：金额必须与订单一致，防止复用更早/更大的旧交易
+	if !actualAmount.Equal(expectedAmount) {
+		c.JSON(200, gin.H{"message": "error", "data": "支付金额与订单金额不一致，请按订单金额付款"})
 		return
 	}
 
-	// 更新订单状态
+	// 更新订单状态并记录链上信息
 	topUp.Status = "success"
+	topUp.TxHash = &req.TxHash
+	topUp.Chain = &req.Chain
+	topUp.CompleteTime = time.Now().Unix()
 	metadata := map[string]string{
 		"chain":   req.Chain,
 		"tx_hash": req.TxHash,
@@ -322,7 +344,8 @@ func VerifyWeb3Transaction(c *gin.Context) {
 	err = topUp.Update()
 	if err != nil {
 		log.Printf("更新Web3订单失败: %v", topUp)
-		c.JSON(200, gin.H{"message": "error", "data": "更新订单失败"})
+		// 可能是 tx_hash 唯一索引冲突
+		c.JSON(200, gin.H{"message": "error", "data": "更新订单失败，可能为重复交易哈希"})
 		return
 	}
 
@@ -417,13 +440,13 @@ func getWeb3PayMoney(amount float64, group string) float64 {
 }
 
 func getWeb3MinTopup() int64 {
-	// 默认最小充值 10 USDC
+	// 默认最小充值 1 USDC，可通过配置项 Web3MinTopup 自定义（默认建议 10 USDC）
 	// 可以通过配置项 Web3MinTopup 自定义
-	minTopup := 10
+	minTopup := 1
 
 	// 从配置读取自定义的最小充值金额
 	if minTopupStr, ok := common.OptionMap["Web3MinTopup"]; ok && minTopupStr != "" {
-		if customMinTopup, err := strconv.Atoi(minTopupStr); err == nil && customMinTopup > 0 {
+		if customMinTopup, err := strconv.Atoi(minTopupStr); err == nil && customMinTopup >= 1 {
 			minTopup = customMinTopup
 		}
 	}

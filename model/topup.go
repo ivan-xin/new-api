@@ -21,6 +21,9 @@ type TopUp struct {
 	CreateTime    int64   `json:"create_time"`
 	CompleteTime  int64   `json:"complete_time"`
 	Status        string  `json:"status"`
+	// Web3 specific fields for deduplication and auditing
+	TxHash *string `json:"tx_hash" gorm:"type:varchar(66);uniqueIndex"`
+	Chain  *string `json:"chain" gorm:"type:varchar(32);index"`
 }
 
 func (topUp *TopUp) Insert() error {
@@ -50,6 +53,18 @@ func GetTopUpByTradeNo(tradeNo string) *TopUp {
 	var err error
 	err = DB.Where("trade_no = ?", tradeNo).First(&topUp).Error
 	if err != nil {
+		return nil
+	}
+	return topUp
+}
+
+// GetTopUpByTxHash returns a topup record by tx hash if exists
+func GetTopUpByTxHash(txHash string) *TopUp {
+	if txHash == "" {
+		return nil
+	}
+	var topUp *TopUp
+	if err := DB.Where("tx_hash = ?", txHash).First(&topUp).Error; err != nil {
 		return nil
 	}
 	return topUp
