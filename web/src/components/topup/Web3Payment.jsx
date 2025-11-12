@@ -55,8 +55,8 @@ export default function Web3Payment({ amount, visible, onCancel, onSuccess }) {
   const isTestnet = chainId ? isTestnetChain(chainId) : false;
   const currentChainConfig = chainId ? getChainConfig(chainId) : null;
   
-  // 获取可用的主网链列表
-  const availableChains = getAvailableChains();
+  // 获取可用的主网链列表（排除当前链）
+  const availableChains = getAvailableChains().filter(chain => chain.id !== chainId);
   
   // 检查是否允许测试网（根据环境变量）
   const testnetAllowed = isTestnetEnabled();
@@ -310,19 +310,22 @@ export default function Web3Payment({ amount, visible, onCancel, onSuccess }) {
               <Text type="tertiary">
                 {t('生产环境禁止使用测试网充值。请切换到主网（如 Base、Arbitrum One 等）后再进行充值操作。')}
               </Text>
-              {availableChains.length > 0 && (
-                <Select
-                  placeholder={t('选择要切换的主网')}
-                  style={{ width: '100%', marginTop: 8 }}
-                  onChange={(value) => switchToChain(value)}
-                >
+              <div style={{ marginTop: 12 }}>
+                <Text type="tertiary" style={{ display: 'block', marginBottom: 8 }}>
+                  {t('请选择要切换的主网：')}
+                </Text>
+                <Space wrap style={{ width: '100%' }}>
                   {availableChains.map(chain => (
-                    <Select.Option key={chain.id} value={chain.id}>
-                      {chain.label} {chain.isRecommended && t('(推荐)')}
-                    </Select.Option>
+                    <Button
+                      key={chain.id}
+                      type={chain.isRecommended ? 'primary' : 'secondary'}
+                      onClick={() => switchToChain(chain.id)}
+                    >
+                      {chain.label} {chain.isRecommended && `⭐`}
+                    </Button>
                   ))}
-                </Select>
-              )}
+                </Space>
+              </div>
             </Space>
           </Card>
         )}
