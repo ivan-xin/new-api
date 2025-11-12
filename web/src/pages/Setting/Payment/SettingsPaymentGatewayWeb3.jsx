@@ -226,18 +226,18 @@ export default function SettingsPaymentGatewayWeb3(props) {
                 placeholder={t('10')}
                 value={inputs.Web3MinTopup}
                 onChange={(value) => handleInputChange('Web3MinTopup', value)}
-                min={10}
+                min={1}
                 suffix='USDC'
                 rules={[
                   {
                     type: 'number',
-                    min: 10,
-                    message: t('最小充值金额不能低于 10 USDC'),
+                    min: 1,
+                    message: t('最小充值金额不能低于 1 USDC'),
                   },
                 ]}
                 extraText={
                   <Text type='tertiary' size='small'>
-                    {t('最小充值 10 USDC')}
+                    {t('最小充值 1 USDC，默认 10 USDC')}
                   </Text>
                 }
               />

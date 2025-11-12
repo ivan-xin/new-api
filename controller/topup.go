@@ -67,8 +67,8 @@ func GetTopUpInfo(c *gin.Context) {
 		}
 
 		if !hasWeb3 {
-			// 读取配置的最小充值金额，默认 10
-			minTopup := "10"
+			// 读取配置的最小充值金额，默认 1 USDC（建议配置 10 USDC）
+			minTopup := "1"
 			if minTopupStr, ok := common.OptionMap["Web3MinTopup"]; ok && minTopupStr != "" {
 				minTopup = minTopupStr
 			}
@@ -83,10 +83,10 @@ func GetTopUpInfo(c *gin.Context) {
 		}
 	}
 
-	// 读取配置的 Web3 最小充值金额，默认 10
-	web3MinTopup := 10
+	// 读取配置的 Web3 最小充值金额，默认 1 USDC（建议配置 10 USDC）
+	web3MinTopup := 1
 	if minTopupStr, ok := common.OptionMap["Web3MinTopup"]; ok && minTopupStr != "" {
-		if customMinTopup, err := strconv.Atoi(minTopupStr); err == nil && customMinTopup > 0 {
+		if customMinTopup, err := strconv.Atoi(minTopupStr); err == nil && customMinTopup >= 1 {
 			web3MinTopup = customMinTopup
 		}
 	}
@@ -343,8 +343,11 @@ func RequestAmount(c *gin.Context) {
 		return
 	}
 
-	if req.Amount < getMinTopup() {
-		c.JSON(200, gin.H{"message": "error", "data": fmt.Sprintf("充值数量不能小于 %d", getMinTopup())})
+	// 注意：不在这里验证最小充值，因为不同支付方式有不同的最小充值要求
+	// 最小充值验证应该在各自的支付接口中进行（RequestEpay, RequestStripeAmount, InitWeb3Payment）
+	// 这里只做基本的合理性检查
+	if req.Amount < 1 {
+		c.JSON(200, gin.H{"message": "error", "data": "充值数量不能小于 1"})
 		return
 	}
 	id := c.GetInt("id")

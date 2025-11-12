@@ -153,8 +153,12 @@ const TopUp = () => {
   const preTopUp = async (payment) => {
     // Web3 USDC 支付
     if (payment === 'web3_usdc') {
-      if (topUpCount < minTopUp) {
-        showError(t('充值数量不能小于') + minTopUp);
+      // 查找 Web3 支付方式的最小充值限制
+      const web3Method = payMethods.find(m => m.type === 'web3_usdc');
+      const web3MinTopup = web3Method?.min_topup ? Number(web3Method.min_topup) : minTopUp;
+      
+      if (topUpCount < web3MinTopup) {
+        showError(t('充值数量不能小于') + web3MinTopup);
         return;
       }
       setShowWeb3Modal(true);
@@ -370,7 +374,7 @@ const TopUp = () => {
             minTopUpValues.push(Number(data.stripe_min_topup));
           }
           if (enableWeb3TopUp) {
-            minTopUpValues.push(Number(data.web3_min_topup) || 10);
+            minTopUpValues.push(Number(data.web3_min_topup) || 1);
           }
           
           // 取所有启用支付方式中的最小值
